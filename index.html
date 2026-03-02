@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Gerador de Etiqueta Azul</title>
+<title>Gerador Etiqueta Azul</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -15,8 +15,8 @@ body {
 }
 
 button {
-    padding: 10px;
-    margin-top: 10px;
+    padding: 8px 12px;
+    margin-top: 8px;
 }
 
 .etiqueta {
@@ -28,7 +28,7 @@ button {
 }
 
 .logo {
-    width: 120px;
+    width: 140px;
     margin-bottom: 10px;
 }
 
@@ -42,6 +42,12 @@ button {
 .sla {
     font-size: 20px;
     margin-top: 10px;
+}
+
+.status {
+    font-size: 14px;
+    margin-top: 10px;
+    color: gray;
 }
 
 @media print {
@@ -64,15 +70,17 @@ button {
 
 <h2>Teste OCR - Etiqueta Azul</h2>
 
-<input type="file" id="upload">
+<input type="file" id="upload" accept="image/*">
 <br>
 <button onclick="processar()">Processar Foto</button>
 <button onclick="window.print()">Imprimir</button>
 
+<div class="status" id="status"></div>
+
 <div class="etiqueta" id="etiqueta" style="display:none;">
 
-    <img class="logo" 
-    src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Azul_Brazilian_Airlines_logo.svg">
+    <!-- LOGO LOCAL -->
+    <img class="logo" src="logo-azulcargo.png">
 
     <div class="awb" id="awbLabel"></div>
     <div class="sla" id="slaLabel"></div>
@@ -87,13 +95,28 @@ function processar() {
     const file = document.getElementById('upload').files[0];
     if (!file) return alert("Selecione uma imagem");
 
+    document.getElementById("status").innerText = "Processando OCR...";
+
     Tesseract.recognize(
         file,
         'por'
     ).then(({ data: { text } }) => {
 
-        const awbMatch = text.match(/\b\d{8}\b/);
-        const dataMatch = text.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+        console.log("Texto OCR:", text);
+
+        // Remove quebras e espaços extras
+        const texto = text.replace(/\n/g, " ");
+
+        // AWB padrão Azul (577 + 8 dígitos)
+        let awbMatch = texto.match(/577\d{8}/);
+
+        // Se não encontrar, tenta 8 dígitos isolados
+        if (!awbMatch) {
+            awbMatch = texto.match(/\b\d{8}\b/);
+        }
+
+        // Data flexível
+        const dataMatch = texto.match(/\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/);
 
         const awb = awbMatch ? awbMatch[0] : "NÃO IDENTIFICADO";
         const data = dataMatch ? dataMatch[0] : "DATA NÃO IDENTIFICADA";
@@ -105,11 +128,18 @@ function processar() {
 
         document.getElementById("qr").innerHTML = "";
 
-        QRCode.toCanvas(
-            document.getElementById("qr"),
-            awb
-        );
+        if (awb !== "NÃO IDENTIFICADO") {
+            QRCode.toCanvas(
+                document.getElementById("qr"),
+                awb
+            );
+        }
 
+        document.getElementById("status").innerText = "Processamento concluído.";
+
+    }).catch(err => {
+        console.error(err);
+        document.getElementById("status").innerText = "Erro no OCR.";
     });
 }
 
