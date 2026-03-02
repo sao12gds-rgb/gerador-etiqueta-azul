@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Gerador de Etiqueta Azul</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #f2f2f2;
+}
+
+button {
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.etiqueta {
+    width: 380px;
+    border: 2px solid black;
+    padding: 20px;
+    background: white;
+    margin-top: 20px;
+}
+
+.logo {
+    width: 120px;
+    margin-bottom: 10px;
+}
+
+.awb {
+    font-size: 48px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.sla {
+    font-size: 20px;
+    margin-top: 10px;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .etiqueta, .etiqueta * {
+        visibility: visible;
+    }
+    .etiqueta {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<h2>Teste OCR - Etiqueta Azul</h2>
+
+<input type="file" id="upload">
+<br>
+<button onclick="processar()">Processar Foto</button>
+<button onclick="window.print()">Imprimir</button>
+
+<div class="etiqueta" id="etiqueta" style="display:none;">
+
+    <img class="logo" 
+    src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Azul_Brazilian_Airlines_logo.svg">
+
+    <div class="awb" id="awbLabel"></div>
+    <div class="sla" id="slaLabel"></div>
+    <div id="qr" style="margin-top:15px;"></div>
+
+</div>
+
+<script>
+
+function processar() {
+
+    const file = document.getElementById('upload').files[0];
+    if (!file) return alert("Selecione uma imagem");
+
+    Tesseract.recognize(
+        file,
+        'por'
+    ).then(({ data: { text } }) => {
+
+        const awbMatch = text.match(/\b\d{8}\b/);
+        const dataMatch = text.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+
+        const awb = awbMatch ? awbMatch[0] : "NÃO IDENTIFICADO";
+        const data = dataMatch ? dataMatch[0] : "DATA NÃO IDENTIFICADA";
+
+        document.getElementById("awbLabel").innerText = awb;
+        document.getElementById("slaLabel").innerText = "SLA: " + data;
+
+        document.getElementById("etiqueta").style.display = "block";
+
+        document.getElementById("qr").innerHTML = "";
+
+        QRCode.toCanvas(
+            document.getElementById("qr"),
+            awb
+        );
+
+    });
+}
+
+</script>
+
+</body>
+</html>
