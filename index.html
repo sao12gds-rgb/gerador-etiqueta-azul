@@ -34,21 +34,10 @@ h2 {
     color: white;
 }
 
-.galeria {
-    background-color: #0056b3;
-}
-
-.camera {
-    background-color: #28a745;
-}
-
-.processar {
-    background-color: #ff9800;
-}
-
-.imprimir {
-    background-color: #6c757d;
-}
+.galeria { background-color: #0056b3; }
+.camera { background-color: #28a745; }
+.processar { background-color: #ff9800; }
+.imprimir { background-color: #6c757d; }
 
 .container {
     display: grid;
@@ -68,9 +57,7 @@ h2 {
     justify-content: space-between;
 }
 
-.logo {
-    width: 130px;
-}
+.logo { width: 130px; }
 
 .awb {
     font-size: 42px;
@@ -90,13 +77,14 @@ h2 {
     justify-content: center;
 }
 
+.status {
+    text-align: center;
+    font-size: 26px;
+}
+
 @media print {
-    body * {
-        visibility: hidden;
-    }
-    .container, .container * {
-        visibility: visible;
-    }
+    body * { visibility: hidden; }
+    .container, .container * { visibility: visible; }
     .container {
         position: absolute;
         top: 0;
@@ -125,7 +113,6 @@ h2 {
 </label>
 
 <button class="botao processar" onclick="processar()">Processar</button>
-
 <button class="botao imprimir" onclick="window.print()">Imprimir A4</button>
 
 </div>
@@ -134,46 +121,39 @@ h2 {
 
 <script>
 
-let imagens = [];
-
-document.getElementById("upload").addEventListener("change", function(e){
-    adicionarImagens(e.target.files);
-});
-
-document.getElementById("camera").addEventListener("change", function(e){
-    adicionarImagens(e.target.files);
-});
-
-function adicionarImagens(files) {
-
-    for (let i = 0; i < files.length; i++) {
-        if (imagens.length < 4) {
-            imagens.push(files[i]);
-        }
-    }
-
-    alert(imagens.length + " imagem(ns) carregada(s). Máximo 4.");
-}
-
 async function processar() {
 
-    if (imagens.length === 0) {
-        alert("Nenhuma imagem selecionada.");
+    const galeria = document.getElementById("upload").files;
+    const camera = document.getElementById("camera").files;
+
+    const arquivos = [...galeria, ...camera];
+
+    if (arquivos.length === 0) {
+        alert("Selecione ou tire pelo menos uma foto.");
+        return;
+    }
+
+    if (arquivos.length > 4) {
+        alert("Máximo permitido: 4 imagens.");
         return;
     }
 
     const container = document.getElementById("container");
     container.innerHTML = "";
 
-    for (let i = 0; i < imagens.length; i++) {
+    for (let i = 0; i < arquivos.length; i++) {
 
-        const result = await Tesseract.recognize(imagens[i], 'por');
+        const imagemReduzida = await reduzirImagem(arquivos[i]);
+
+        const result = await Tesseract.recognize(imagemReduzida, 'eng');
         const text = result.data.text;
 
         let numeros = text.replace(/\D/g, "");
         let awbFinal = "NÃO IDENTIFICADO";
+        let sucesso = false;
 
         if (numeros.length >= 11) {
+
             let semPrefixo = numeros.substring(3);
             let ultimos8 = semPrefixo.slice(-8);
 
@@ -182,6 +162,7 @@ async function processar() {
             }
 
             awbFinal = ultimos8;
+            sucesso = true;
         }
 
         const dataMatch = text.match(/\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/);
@@ -195,11 +176,12 @@ async function processar() {
             <div class="awb">${awbFinal}</div>
             <div class="sla">SLA: ${sla}</div>
             <div class="qr" id="qr${i}"></div>
+            <div class="status">${sucesso ? "✅" : "❌"}</div>
         `;
 
         container.appendChild(etiqueta);
 
-        if (awbFinal !== "NÃO IDENTIFICADO") {
+        if (sucesso) {
             QRCode.toCanvas(
                 document.getElementById(`qr${i}`),
                 awbFinal,
@@ -208,7 +190,44 @@ async function processar() {
         }
     }
 
-    imagens = [];
+    document.getElementById("upload").value = "";
+    document.getElementById("camera").value = "";
+}
+
+function reduzirImagem(file) {
+
+    return new Promise((resolve) => {
+
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+
+            const img = new Image();
+
+            img.onload = function() {
+
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+
+                const largura = 800;
+                const escala = largura / img.width;
+
+                canvas.width = largura;
+                canvas.height = img.height * escala;
+
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                canvas.toBlob(function(blob) {
+                    resolve(blob);
+                }, "image/jpeg", 0.8);
+
+            };
+
+            img.src = event.target.result;
+        };
+
+        reader.readAsDataURL(file);
+    });
 }
 
 </script>
