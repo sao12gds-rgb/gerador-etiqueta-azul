@@ -80,25 +80,35 @@ button {
 
 <h2>Gerador 4 Etiquetas - Azul</h2>
 
+<!-- Escolher da galeria -->
 <input type="file" id="upload" accept="image/*" multiple>
+
+<br><br>
+
+<!-- Tirar foto direto da câmera -->
+<input type="file" id="camera" accept="image/*" capture="environment" multiple>
+
 <br>
-<button onclick="processar()">Processar Fotos</button>
+<button onclick="processarArquivos()">Processar Imagens</button>
 <button onclick="window.print()">Imprimir A4</button>
 
 <div class="container" id="container"></div>
 
 <script>
 
-async function processar() {
+async function processarArquivos() {
 
-    const files = document.getElementById('upload').files;
+    const arquivosGaleria = document.getElementById('upload').files;
+    const arquivosCamera = document.getElementById('camera').files;
 
-    if (files.length === 0) {
-        alert("Selecione até 4 imagens");
+    const todosArquivos = [...arquivosGaleria, ...arquivosCamera];
+
+    if (todosArquivos.length === 0) {
+        alert("Selecione ou tire até 4 fotos");
         return;
     }
 
-    if (files.length > 4) {
+    if (todosArquivos.length > 4) {
         alert("Máximo permitido: 4 imagens");
         return;
     }
@@ -106,23 +116,23 @@ async function processar() {
     const container = document.getElementById("container");
     container.innerHTML = "";
 
-    for (let i = 0; i < files.length; i++) {
+    for (let i = 0; i < todosArquivos.length; i++) {
 
-        const file = files[i];
+        const file = todosArquivos[i];
 
         const result = await Tesseract.recognize(file, 'por');
         const text = result.data.text;
 
         console.log("Texto OCR:", text);
 
-        // Extrair apenas números
+        // Extrair números
         let numeros = text.replace(/\D/g, "");
 
         let awbFinal = "NÃO IDENTIFICADO";
 
         if (numeros.length >= 11) {
 
-            // Remove prefixo 577
+            // Remove 577
             let semPrefixo = numeros.substring(3);
 
             let ultimos8 = semPrefixo.slice(-8);
@@ -134,11 +144,10 @@ async function processar() {
             awbFinal = ultimos8;
         }
 
-        // Extrair data (prazo = SLA)
+        // SLA = data encontrada
         const dataMatch = text.match(/\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/);
         const sla = dataMatch ? dataMatch[0] : "DATA NÃO IDENTIFICADA";
 
-        // Criar etiqueta individual
         const etiqueta = document.createElement("div");
         etiqueta.className = "etiqueta";
 
