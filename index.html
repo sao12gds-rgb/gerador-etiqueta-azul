@@ -16,8 +16,6 @@ body {
 
 h2 { color: #003B73; }
 
-.botoes { margin-top: 15px; }
-
 .botao {
     display: inline-block;
     padding: 10px 18px;
@@ -50,6 +48,7 @@ h2 { color: #003B73; }
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    position: relative;
 }
 
 .logo { width: 130px; }
@@ -58,7 +57,6 @@ h2 { color: #003B73; }
     font-size: 42px;
     font-weight: bold;
     text-align: center;
-    color: black;
 }
 
 .sla {
@@ -72,9 +70,26 @@ h2 { color: #003B73; }
     justify-content: center;
 }
 
-.status {
+.processando {
+    position: absolute;
+    top: 40%;
+    left: 0;
+    right: 0;
     text-align: center;
-    font-size: 28px;
+    font-size: 22px;
+    color: orange;
+}
+
+.ok {
+    font-size: 90px;
+    color: #28a745;
+    text-align: center;
+}
+
+.erro {
+    font-size: 90px;
+    color: red;
+    text-align: center;
 }
 
 @media print {
@@ -94,22 +109,18 @@ h2 { color: #003B73; }
 
 <h2>Gerador 4 Etiquetas - Azul</h2>
 
-<div class="botoes">
-
 <label class="botao galeria">
-📁 Selecionar da Galeria
+📁 Galeria
 <input type="file" id="upload" accept="image/*" multiple style="display:none;">
 </label>
 
 <label class="botao camera">
-📷 Tirar Foto
+📷 Câmera
 <input type="file" id="camera" accept="image/*" capture="environment" style="display:none;">
 </label>
 
 <button class="botao processar" onclick="processar()">Processar</button>
 <button class="botao imprimir" onclick="window.print()">Imprimir A4</button>
-
-</div>
 
 <div class="container" id="container"></div>
 
@@ -119,23 +130,26 @@ async function processar() {
 
     const galeria = document.getElementById("upload").files;
     const camera = document.getElementById("camera").files;
-
     const arquivos = [...galeria, ...camera];
 
     if (arquivos.length === 0) {
-        alert("Selecione ou tire pelo menos uma foto.");
-        return;
-    }
-
-    if (arquivos.length > 4) {
-        alert("Máximo permitido: 4 imagens.");
+        alert("Selecione pelo menos uma imagem.");
         return;
     }
 
     const container = document.getElementById("container");
     container.innerHTML = "";
 
-    for (let i = 0; i < arquivos.length; i++) {
+    for (let i = 0; i < arquivos.length && i < 4; i++) {
+
+        const etiqueta = document.createElement("div");
+        etiqueta.className = "etiqueta";
+
+        etiqueta.innerHTML = `
+            <div class="processando">🔄 Processando...</div>
+        `;
+
+        container.appendChild(etiqueta);
 
         const imagemReduzida = await reduzirImagem(arquivos[i]);
         const result = await Tesseract.recognize(imagemReduzida, 'eng');
@@ -146,39 +160,30 @@ async function processar() {
         let sucesso = false;
 
         if (numeros.length >= 11) {
-
             let semPrefixo = numeros.substring(3);
             let ultimos8 = semPrefixo.slice(-8);
-
             if (ultimos8.length === 7) {
                 ultimos8 = "0" + ultimos8;
             }
-
             awbFinal = ultimos8;
             sucesso = true;
         }
 
-        // 🔵 SLA = DATA APÓS A PALAVRA "Prazo"
         let sla = "DATA NÃO IDENTIFICADA";
-
         const prazoMatch = text.match(/Prazo\s*(\d{2}[\/\-.]\d{2}[\/\-.]\d{4})/i);
-
         if (prazoMatch) {
             sla = prazoMatch[1];
         }
-
-        const etiqueta = document.createElement("div");
-        etiqueta.className = "etiqueta";
 
         etiqueta.innerHTML = `
             <img class="logo" src="logo-azulcargo.png">
             <div class="awb">${awbFinal}</div>
             <div class="sla">SLA: ${sla}</div>
             <div class="qr" id="qr${i}"></div>
-            <div class="status">${sucesso ? "✅" : "❌"}</div>
+            <div class="${sucesso ? "ok" : "erro"}">
+                ${sucesso ? "✔" : "✖"}
+            </div>
         `;
-
-        container.appendChild(etiqueta);
 
         if (sucesso) {
             QRCode.toCanvas(
