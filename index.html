@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Gerador Etiqueta Azul</title>
+<title>Gerador 4 Etiquetas Azul</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -19,48 +19,48 @@ button {
     margin-top: 8px;
 }
 
-.etiqueta {
-    width: 380px;
-    border: 2px solid black;
-    padding: 20px;
-    background: white;
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
     margin-top: 20px;
 }
 
+.etiqueta {
+    border: 2px solid black;
+    padding: 15px;
+    background: white;
+    height: 350px;
+}
+
 .logo {
-    width: 140px;
-    margin-bottom: 10px;
+    width: 120px;
 }
 
 .awb {
-    font-size: 48px;
+    font-size: 40px;
     font-weight: bold;
     text-align: center;
-    margin-top: 10px;
+    margin-top: 15px;
 }
 
 .sla {
-    font-size: 20px;
+    font-size: 18px;
     margin-top: 10px;
-}
-
-.status {
-    font-size: 14px;
-    margin-top: 10px;
-    color: gray;
 }
 
 @media print {
     body * {
         visibility: hidden;
     }
-    .etiqueta, .etiqueta * {
+    .container, .container * {
         visibility: visible;
     }
-    .etiqueta {
+    .container {
         position: absolute;
         top: 0;
         left: 0;
+        width: 100%;
     }
 }
 </style>
@@ -68,79 +68,82 @@ button {
 
 <body>
 
-<h2>Gerador OCR - Etiqueta Azul</h2>
+<h2>Gerador 4 Etiquetas - Azul</h2>
 
-<input type="file" id="upload" accept="image/*">
+<input type="file" id="upload" accept="image/*" multiple>
 <br>
-<button onclick="processar()">Processar Foto</button>
-<button onclick="window.print()">Imprimir</button>
+<button onclick="processar()">Processar Fotos</button>
+<button onclick="window.print()">Imprimir A4</button>
 
-<div class="status" id="status"></div>
-
-<div class="etiqueta" id="etiqueta" style="display:none;">
-
-    <img class="logo" src="logo-azulcargo.png">
-
-    <div class="awb" id="awbLabel"></div>
-    <div class="sla" id="slaLabel"></div>
-    <div id="qr" style="margin-top:15px;"></div>
-
-</div>
+<div class="container" id="container"></div>
 
 <script>
 
-function processar() {
+async function processar() {
 
-    const file = document.getElementById('upload').files[0];
-    if (!file) {
-        alert("Selecione uma imagem");
+    const files = document.getElementById('upload').files;
+    if (files.length === 0) {
+        alert("Selecione até 4 imagens");
         return;
     }
 
-    document.getElementById("status").innerText = "Processando OCR...";
+    const container = document.getElementById("container");
+    container.innerHTML = "";
 
-    Tesseract.recognize(file, 'por')
-    .then(({ data: { text } }) => {
+    for (let i = 0; i < files.length && i < 4; i++) {
+
+        const file = files[i];
+
+        const result = await Tesseract.recognize(file, 'por');
+        const text = result.data.text;
 
         console.log("Texto OCR:", text);
 
-        // Remove tudo que não for número
-        const numeros = text.replace(/\D/g, "");
+        // Extrair somente números
+        let numeros = text.replace(/\D/g, "");
 
-        let awb = "NÃO IDENTIFICADO";
-        let data = "DATA NÃO IDENTIFICADA";
+        let awbFinal = "NÃO IDENTIFICADO";
 
-        // Se existir número suficiente, pega os últimos 8 dígitos
-        if (numeros.length >= 8) {
-            awb = numeros.slice(-8);
+        if (numeros.length >= 11) {
+
+            // Remove os 3 primeiros dígitos (577)
+            let semPrefixo = numeros.substring(3);
+
+            // Pega os últimos 8 dígitos
+            let ultimos8 = semPrefixo.slice(-8);
+
+            // Se ficar com 7 dígitos, adiciona 0 no início
+            if (ultimos8.length === 7) {
+                ultimos8 = "0" + ultimos8;
+            }
+
+            awbFinal = ultimos8;
         }
 
-        // Buscar data em vários formatos
+        // Extrair data (prazo = SLA)
         const dataMatch = text.match(/\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/);
-        if (dataMatch) {
-            data = dataMatch[0];
-        }
+        const sla = dataMatch ? dataMatch[0] : "DATA NÃO IDENTIFICADA";
 
-        document.getElementById("awbLabel").innerText = awb;
-        document.getElementById("slaLabel").innerText = "SLA: " + data;
+        // Criar etiqueta
+        const etiqueta = document.createElement("div");
+        etiqueta.className = "etiqueta";
 
-        document.getElementById("etiqueta").style.display = "block";
-        document.getElementById("qr").innerHTML = "";
+        etiqueta.innerHTML = `
+            <img class="logo" src="logo-azulcargo.png">
+            <div class="awb">${awbFinal}</div>
+            <div class="sla">SLA: ${sla}</div>
+            <div id="qr${i}" style="margin-top:15px;"></div>
+        `;
 
-        if (awb !== "NÃO IDENTIFICADO") {
+        container.appendChild(etiqueta);
+
+        if (awbFinal !== "NÃO IDENTIFICADO") {
             QRCode.toCanvas(
-                document.getElementById("qr"),
-                awb
+                document.getElementById(`qr${i}`),
+                awbFinal
             );
         }
-
-        document.getElementById("status").innerText = "Processamento concluído.";
-
-    })
-    .catch(err => {
-        console.error(err);
-        document.getElementById("status").innerText = "Erro no OCR.";
-    });
+    }
 }
 
 </script>
