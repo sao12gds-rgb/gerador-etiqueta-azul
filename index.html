@@ -68,7 +68,7 @@ button {
 
 <body>
 
-<h2>Teste OCR - Etiqueta Azul</h2>
+<h2>Gerador OCR - Etiqueta Azul</h2>
 
 <input type="file" id="upload" accept="image/*">
 <br>
@@ -79,7 +79,6 @@ button {
 
 <div class="etiqueta" id="etiqueta" style="display:none;">
 
-    <!-- LOGO LOCAL -->
     <img class="logo" src="logo-azulcargo.png">
 
     <div class="awb" id="awbLabel"></div>
@@ -93,39 +92,39 @@ button {
 function processar() {
 
     const file = document.getElementById('upload').files[0];
-    if (!file) return alert("Selecione uma imagem");
+    if (!file) {
+        alert("Selecione uma imagem");
+        return;
+    }
 
     document.getElementById("status").innerText = "Processando OCR...";
 
-    Tesseract.recognize(
-        file,
-        'por'
-    ).then(({ data: { text } }) => {
+    Tesseract.recognize(file, 'por')
+    .then(({ data: { text } }) => {
 
         console.log("Texto OCR:", text);
 
-        // Remove quebras e espaços extras
-        const texto = text.replace(/\n/g, " ");
+        // Remove tudo que não for número
+        const numeros = text.replace(/\D/g, "");
 
-        // AWB padrão Azul (577 + 8 dígitos)
-        let awbMatch = texto.match(/577\d{8}/);
+        let awb = "NÃO IDENTIFICADO";
+        let data = "DATA NÃO IDENTIFICADA";
 
-        // Se não encontrar, tenta 8 dígitos isolados
-        if (!awbMatch) {
-            awbMatch = texto.match(/\b\d{8}\b/);
+        // Se existir número suficiente, pega os últimos 8 dígitos
+        if (numeros.length >= 8) {
+            awb = numeros.slice(-8);
         }
 
-        // Data flexível
-        const dataMatch = texto.match(/\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/);
-
-        const awb = awbMatch ? awbMatch[0] : "NÃO IDENTIFICADO";
-        const data = dataMatch ? dataMatch[0] : "DATA NÃO IDENTIFICADA";
+        // Buscar data em vários formatos
+        const dataMatch = text.match(/\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/);
+        if (dataMatch) {
+            data = dataMatch[0];
+        }
 
         document.getElementById("awbLabel").innerText = awb;
         document.getElementById("slaLabel").innerText = "SLA: " + data;
 
         document.getElementById("etiqueta").style.display = "block";
-
         document.getElementById("qr").innerHTML = "";
 
         if (awb !== "NÃO IDENTIFICADO") {
@@ -137,7 +136,8 @@ function processar() {
 
         document.getElementById("status").innerText = "Processamento concluído.";
 
-    }).catch(err => {
+    })
+    .catch(err => {
         console.error(err);
         document.getElementById("status").innerText = "Erro no OCR.";
     });
