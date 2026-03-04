@@ -59,7 +59,6 @@ h2 { color:#003B73; }
 }
 </style>
 </head>
-
 <body>
 
 <h2>Gerador 4 Etiquetas - Azul</h2>
@@ -91,11 +90,16 @@ async function initWorker(){
     }
 }
 
+function parseDate(str){
+    const [d,m,y]=str.split(/[\/\-.]/);
+    return new Date(y,m-1,d);
+}
+
 async function processar(){
 
-    const galeria = document.getElementById("upload").files;
-    const camera = document.getElementById("camera").files;
-    const arquivos = [...galeria, ...camera];
+    const galeria=document.getElementById("upload").files;
+    const camera=document.getElementById("camera").files;
+    const arquivos=[...galeria,...camera];
 
     if(arquivos.length===0){
         alert("Selecione pelo menos uma imagem.");
@@ -134,10 +138,19 @@ async function processar(){
             // ===== PRAZO =====
             let prazoFinal="PRAZO NÃO IDENTIFICADO";
 
-            const prazoMatch=text.match(/Prazo[\s:]*?(\d{2}[\/\-.]\d{2}[\/\-.]\d{4})/i);
+            // tenta encontrar palavra Prazo mesmo com erro OCR
+            const regexPrazo=/(Prazo|PRAZO|Praz0|PR AZO)[^\d]*(\d{2}[\/\-.]\d{2}[\/\-.]\d{4})/i;
+            const matchPrazo=text.match(regexPrazo);
 
-            if(prazoMatch){
-                prazoFinal=prazoMatch[1];
+            if(matchPrazo && matchPrazo[2]){
+                prazoFinal=matchPrazo[2];
+            }else{
+                // pega todas datas e escolhe a MENOR (normalmente é o prazo)
+                const datas=text.match(/\d{2}[\/\-.]\d{2}[\/\-.]\d{4}/g);
+                if(datas && datas.length>0){
+                    datas.sort((a,b)=>parseDate(a)-parseDate(b));
+                    prazoFinal=datas[0];
+                }
             }
 
             etiqueta.innerHTML=`
