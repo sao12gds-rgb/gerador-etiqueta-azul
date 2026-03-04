@@ -3,7 +3,6 @@
 <head>
 
 <meta charset="UTF-8">
-
 <title>Gerador 4 Etiquetas - Azul</title>
 
 <script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
@@ -50,7 +49,7 @@ background:white;
 border:2px solid #003B73;
 border-radius:8px;
 padding:20px;
-height:330px;
+height:340px;
 
 display:flex;
 flex-direction:column;
@@ -60,20 +59,14 @@ align-items:center;
 }
 
 .logo{
-width:130px;
+width:140px;
 margin-bottom:15px;
 }
 
 .awb{
-font-size:42px;
+font-size:46px;
 font-weight:bold;
 margin-bottom:10px;
-}
-
-.origem{
-font-size:24px;
-margin-top:10px;
-color:#003B73;
 }
 
 .barcode{
@@ -176,11 +169,11 @@ try{
 
 const { data:{ text } } = await worker.recognize(arquivos[i]);
 
-// AWB
+// ===== CAPTURAR AWB =====
 
 let numeros=text.replace(/\D/g,"");
 
-let awbFinal="NÃO IDENTIFICADO";
+let awbFinal="00000000";
 
 if(numeros.length>=11){
 
@@ -198,37 +191,7 @@ awbFinal=ultimos8;
 
 }
 
-// ORIGEM
-
-let origemFinal="ORIGEM NÃO IDENTIFICADA";
-
-const linhas=text.split("\n");
-
-for(let l=0;l<linhas.length;l++){
-
-const linha=linhas[l].toUpperCase();
-
-if(linha.includes("ORIGEM") || linha.includes("0RIGEM")){
-
-if(linhas[l+1]){
-
-const codigo=linhas[l+1].match(/[A-Z0-9]{3,6}/);
-
-if(codigo){
-
-origemFinal=codigo[0];
-
-break;
-
-}
-
-}
-
-}
-
-}
-
-// montar etiqueta
+// ===== GERAR ETIQUETA =====
 
 etiqueta.innerHTML=`
 
@@ -238,21 +201,18 @@ etiqueta.innerHTML=`
 
 <svg class="barcode" id="barcode${i}"></svg>
 
-<div class="origem">ORIGEM: ${origemFinal}</div>
-
 `;
 
-// gerar barcode
+// ===== GERAR BARCODE =====
 
 JsBarcode(`#barcode${i}`, awbFinal, {
 
-format:"CODE128",
-
-width:2,
-
-height:60,
-
-displayValue:false
+format: "CODE128",
+width: 4,
+height: 110,
+margin: 20,
+displayValue: true,
+fontSize: 22
 
 });
 
