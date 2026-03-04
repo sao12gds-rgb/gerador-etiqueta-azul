@@ -14,7 +14,9 @@ body {
     padding: 20px;
 }
 
-h2 { color: #003B73; }
+h2 {
+    color: #003B73;
+}
 
 .botao {
     display: inline-block;
@@ -27,10 +29,10 @@ h2 { color: #003B73; }
     color: white;
 }
 
-.galeria { background-color: #0056b3; }
-.camera { background-color: #28a745; }
-.processar { background-color: #ff9800; }
-.imprimir { background-color: #6c757d; }
+.galeria { background: #0056b3; }
+.camera { background: #28a745; }
+.processar { background: #ff9800; }
+.imprimir { background: #6c757d; }
 
 .container {
     display: grid;
@@ -72,7 +74,7 @@ h2 { color: #003B73; }
 
 .processando {
     position: absolute;
-    top: 40%;
+    top: 45%;
     left: 0;
     right: 0;
     text-align: center;
@@ -81,13 +83,13 @@ h2 { color: #003B73; }
 }
 
 .ok {
-    font-size: 90px;
+    font-size: 80px;
     color: #28a745;
     text-align: center;
 }
 
 .erro {
-    font-size: 90px;
+    font-size: 80px;
     color: red;
     text-align: center;
 }
@@ -144,53 +146,64 @@ async function processar() {
 
         const etiqueta = document.createElement("div");
         etiqueta.className = "etiqueta";
-
-        etiqueta.innerHTML = `
-            <div class="processando">🔄 Processando...</div>
-        `;
-
+        etiqueta.innerHTML = `<div class="processando">🔄 Processando...</div>`;
         container.appendChild(etiqueta);
 
-        const imagemReduzida = await reduzirImagem(arquivos[i]);
-        const result = await Tesseract.recognize(imagemReduzida, 'eng');
-        const text = result.data.text;
+        try {
 
-        let numeros = text.replace(/\D/g, "");
-        let awbFinal = "NÃO IDENTIFICADO";
-        let sucesso = false;
+            const imagemReduzida = await reduzirImagem(arquivos[i]);
 
-        if (numeros.length >= 11) {
-            let semPrefixo = numeros.substring(3);
-            let ultimos8 = semPrefixo.slice(-8);
-            if (ultimos8.length === 7) {
-                ultimos8 = "0" + ultimos8;
+            const result = await Promise.race([
+                Tesseract.recognize(imagemReduzida, 'eng'),
+                timeout(10000)
+            ]);
+
+            const text = result.data.text;
+
+            let numeros = text.replace(/\D/g, "");
+            let awbFinal = "NÃO IDENTIFICADO";
+            let sucesso = false;
+
+            if (numeros.length >= 11) {
+                let semPrefixo = numeros.substring(3);
+                let ultimos8 = semPrefixo.slice(-8);
+                if (ultimos8.length === 7) {
+                    ultimos8 = "0" + ultimos8;
+                }
+                awbFinal = ultimos8;
+                sucesso = true;
             }
-            awbFinal = ultimos8;
-            sucesso = true;
-        }
 
-        let sla = "DATA NÃO IDENTIFICADA";
-        const prazoMatch = text.match(/Prazo\s*(\d{2}[\/\-.]\d{2}[\/\-.]\d{4})/i);
-        if (prazoMatch) {
-            sla = prazoMatch[1];
-        }
+            let sla = "DATA NÃO IDENTIFICADA";
+            const prazoMatch = text.match(/Prazo\s*(\d{2}[\/\-.]\d{2}[\/\-.]\d{4})/i);
+            if (prazoMatch) {
+                sla = prazoMatch[1];
+            }
 
-        etiqueta.innerHTML = `
-            <img class="logo" src="logo-azulcargo.png">
-            <div class="awb">${awbFinal}</div>
-            <div class="sla">SLA: ${sla}</div>
-            <div class="qr" id="qr${i}"></div>
-            <div class="${sucesso ? "ok" : "erro"}">
-                ${sucesso ? "✔" : "✖"}
-            </div>
-        `;
+            etiqueta.innerHTML = `
+                <img class="logo" src="logo-azulcargo.png">
+                <div class="awb">${awbFinal}</div>
+                <div class="sla">SLA: ${sla}</div>
+                <div class="qr" id="qr${i}"></div>
+                <div class="${sucesso ? "ok" : "erro"}">
+                    ${sucesso ? "✔" : "✖"}
+                </div>
+            `;
 
-        if (sucesso) {
-            QRCode.toCanvas(
-                document.getElementById(`qr${i}`),
-                awbFinal,
-                { width: 90 }
-            );
+            if (sucesso) {
+                QRCode.toCanvas(
+                    document.getElementById(`qr${i}`),
+                    awbFinal,
+                    { width: 90 }
+                );
+            }
+
+        } catch (error) {
+
+            etiqueta.innerHTML = `
+                <div class="erro">✖</div>
+                <div style="text-align:center;">Erro ou Timeout</div>
+            `;
         }
     }
 
@@ -213,7 +226,7 @@ function reduzirImagem(file) {
                 const canvas = document.createElement("canvas");
                 const ctx = canvas.getContext("2d");
 
-                const largura = 800;
+                const largura = 600;
                 const escala = largura / img.width;
 
                 canvas.width = largura;
@@ -223,7 +236,7 @@ function reduzirImagem(file) {
 
                 canvas.toBlob(function(blob) {
                     resolve(blob);
-                }, "image/jpeg", 0.8);
+                }, "image/jpeg", 0.7);
 
             };
 
@@ -232,6 +245,12 @@ function reduzirImagem(file) {
 
         reader.readAsDataURL(file);
     });
+}
+
+function timeout(ms) {
+    return new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout OCR")), ms)
+    );
 }
 
 </script>
