@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+
+body{
+font-family:Arial;
+text-align:center;
+margin-top:120px;
+background:#f4f6f9;
+}
+
+input{
+font-size:45px;
+width:350px;
+text-align:center;
+padding:10px;
+}
+
+.ok{
+color:green;
+font-size:60px;
+margin-top:40px;
+}
+
+.no{
+color:red;
+font-size:60px;
+margin-top:40px;
+}
+
+.info{
+font-size:25px;
+margin-top:20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Controle de Pendências</h2>
+
+<input id="awb" autofocus>
+
+<div id="resultado"></div>
+
+<script>
+
+const API = "COLE_AQUI_SUA_URL_DO_SCRIPT";
+
+document.getElementById("awb").addEventListener("change", buscar);
+
+async function buscar(){
+
+const awb = document.getElementById("awb").value;
+
+const r = await fetch(API + "?awb=" + awb);
+
+const data = await r.json();
+
+const div = document.getElementById("resultado");
+
+if(data.encontrado){
+
+div.innerHTML = `
+<div class="ok">✔ AWB NO CONTROLE</div>
+<div class="info">
+STATUS: ${data.status}<br>
+OBS: ${data.obs}
+</div>
+`;
+
+}else{
+
+div.innerHTML = `
+<div class="no">✖ NÃO ESTÁ NA PLANILHA</div>
+`;
+
+}
+
+document.getElementById("awb").value="";
+
+}
+
+</script>
+
+</body>
+</html>
