@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Gerador 4 Etiquetas - Azul</title>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <style>
@@ -21,6 +21,7 @@ h2 { color:#003B73; }
     border:none;
     color:white;
 }
+
 .galeria{background:#0056b3;}
 .camera{background:#28a745;}
 .processar{background:#ff9800;}
@@ -46,7 +47,7 @@ h2 { color:#003B73; }
 
 .logo{width:130px;}
 .awb{font-size:42px;font-weight:bold;text-align:center;}
-.sla{font-size:20px;text-align:center;color:#003B73;}
+.prazo{font-size:20px;text-align:center;color:#003B73;}
 .qr{display:flex;justify-content:center;}
 .ok{font-size:70px;color:#28a745;text-align:center;}
 .erro{font-size:70px;color:red;text-align:center;}
@@ -58,6 +59,7 @@ h2 { color:#003B73; }
 }
 </style>
 </head>
+
 <body>
 
 <h2>Gerador 4 Etiquetas - Azul</h2>
@@ -116,6 +118,7 @@ async function processar(){
 
             const { data:{ text } } = await worker.recognize(arquivos[i]);
 
+            // ===== AWB =====
             let numeros=text.replace(/\D/g,"");
             let awbFinal="NÃO IDENTIFICADO";
             let sucesso=false;
@@ -128,14 +131,19 @@ async function processar(){
                 sucesso=true;
             }
 
-            let sla="DATA NÃO IDENTIFICADA";
-            const prazoMatch=text.match(/Prazo\s*(\d{2}\/\d{2}\/\d{4})/i);
-            if(prazoMatch){ sla=prazoMatch[1]; }
+            // ===== PRAZO =====
+            let prazoFinal="PRAZO NÃO IDENTIFICADO";
+
+            const prazoMatch=text.match(/Prazo[\s:]*?(\d{2}[\/\-.]\d{2}[\/\-.]\d{4})/i);
+
+            if(prazoMatch){
+                prazoFinal=prazoMatch[1];
+            }
 
             etiqueta.innerHTML=`
                 <img class="logo" src="logo-azulcargo.png">
                 <div class="awb">${awbFinal}</div>
-                <div class="sla">SLA: ${sla}</div>
+                <div class="prazo">PRAZO: ${prazoFinal}</div>
                 <div class="qr" id="qr${i}"></div>
                 <div class="${sucesso?"ok":"erro"}">
                     ${sucesso?"✔":"✖"}
