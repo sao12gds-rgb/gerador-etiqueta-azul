@@ -66,7 +66,14 @@ margin-bottom:15px;
 .awb{
 font-size:42px;
 font-weight:bold;
-margin-bottom:15px;
+margin-bottom:10px;
+}
+
+.prazo{
+font-size:22px;
+font-weight:bold;
+margin-bottom:10px;
+color:#d32f2f;
 }
 
 .barcode{
@@ -169,7 +176,9 @@ try{
 
 const { data:{ text } } = await worker.recognize(arquivos[i]);
 
-// ===== PROCURAR AWB COMEÇANDO COM 577 =====
+// ==========================
+// PROCURAR AWB
+// ==========================
 
 let awbMatch = text.match(/577[0-9]{8,15}/);
 
@@ -181,7 +190,35 @@ awbFinal = awbMatch[0];
 
 }
 
-// ===== MONTAR ETIQUETA =====
+// ==========================
+// PROCURAR PRAZO
+// ==========================
+
+// tenta pegar data depois da palavra Prazo
+let prazoMatch = text.match(/Prazo\s*(\d{2}\/\d{2}\/\d{4})/i);
+
+let prazoFinal = "PRAZO NÃO IDENTIFICADO";
+
+if(prazoMatch){
+
+prazoFinal = prazoMatch[1];
+
+}else{
+
+// fallback: qualquer data
+let dataMatch = text.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+
+if(dataMatch){
+
+prazoFinal = dataMatch[0];
+
+}
+
+}
+
+// ==========================
+// MONTAR ETIQUETA
+// ==========================
 
 etiqueta.innerHTML=`
 
@@ -189,11 +226,15 @@ etiqueta.innerHTML=`
 
 <div class="awb">${awbFinal}</div>
 
+<div class="prazo">Prazo: ${prazoFinal}</div>
+
 <svg class="barcode" id="barcode${i}"></svg>
 
 `;
 
-// ===== GERAR BARCODE =====
+// ==========================
+// GERAR BARCODE
+// ==========================
 
 if(awbFinal !== "AWB NÃO IDENTIFICADA"){
 
