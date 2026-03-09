@@ -1,129 +1,3 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-
-<meta charset="UTF-8">
-<title>Gerador 4 Etiquetas - Azul</title>
-
-<script src="https://unpkg.com/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
-<style>
-
-body{
-font-family:Arial;
-background:#f4f6f9;
-padding:20px;
-}
-
-h2{
-color:#003B73;
-}
-
-.botao{
-display:inline-block;
-padding:10px 18px;
-margin-right:10px;
-border-radius:6px;
-font-weight:bold;
-cursor:pointer;
-border:none;
-color:white;
-}
-
-.galeria{background:#0056b3;}
-.camera{background:#28a745;}
-.processar{background:#ff9800;}
-.imprimir{background:#6c757d;}
-
-.container{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-margin-top:25px;
-}
-
-.etiqueta{
-background:white;
-border:2px solid #003B73;
-border-radius:8px;
-padding:20px;
-height:340px;
-
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-}
-
-.logo{
-width:140px;
-margin-bottom:15px;
-}
-
-.awb{
-font-size:42px;
-font-weight:bold;
-margin-bottom:10px;
-}
-
-.prazo{
-font-size:22px;
-font-weight:bold;
-margin-bottom:10px;
-color:#d32f2f;
-}
-
-.barcode{
-margin-top:10px;
-}
-
-@media print{
-
-body *{
-visibility:hidden;
-}
-
-.container,
-.container *{
-visibility:visible;
-}
-
-.container{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-}
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-<h2>Gerador 4 Etiquetas - Azul</h2>
-
-<label class="botao galeria">
-📁 Galeria
-<input type="file" id="upload" accept="image/*" multiple style="display:none;">
-</label>
-
-<label class="botao camera">
-📷 Câmera
-<input type="file" id="camera" accept="image/*" capture="environment" style="display:none;">
-</label>
-
-<button class="botao processar" onclick="processar()">Processar</button>
-
-<button class="botao imprimir" onclick="window.print()">Imprimir A4</button>
-
-<div class="container" id="container"></div>
-
-<script>
-
 let worker;
 
 async function initOCR(){
@@ -155,11 +29,36 @@ let datas = text.match(/\d{2}\/\d{2}\/\d{4}/g);
 
 if(!datas) return "PRAZO NÃO IDENTIFICADO";
 
-// remove duplicadas
 datas = [...new Set(datas)];
 
-// retorna sempre a última data
 return datas[datas.length-1];
+
+}
+
+function ampliarImagem(file){
+
+return new Promise(resolve=>{
+
+const img=new Image();
+
+img.src=URL.createObjectURL(file);
+
+img.onload=function(){
+
+const canvas=document.createElement("canvas");
+
+canvas.width=img.width*3;
+canvas.height=img.height*3;
+
+const ctx=canvas.getContext("2d");
+
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+resolve(canvas);
+
+};
+
+});
 
 }
 
@@ -194,7 +93,9 @@ container.appendChild(etiqueta);
 
 try{
 
-const { data:{ text } } = await worker.recognize(arquivos[i]);
+const canvasGrande = await ampliarImagem(arquivos[i]);
+
+const { data:{ text } } = await worker.recognize(canvasGrande);
 
 let awbFinal = extrairAWB(text);
 let prazoFinal = extrairPrazo(text);
@@ -238,8 +139,3 @@ document.getElementById("upload").value="";
 document.getElementById("camera").value="";
 
 }
-
-</script>
-
-</body>
-</html>
