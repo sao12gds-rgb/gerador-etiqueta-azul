@@ -74,6 +74,30 @@ margin-bottom:10px;
 color:#d32f2f;
 }
 
+.barcode{
+margin-top:10px;
+}
+
+@media print{
+
+body *{
+visibility:hidden;
+}
+
+.container,
+.container *{
+visibility:visible;
+}
+
+.container{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+}
+
+}
+
 </style>
 
 </head>
@@ -87,7 +111,14 @@ color:#d32f2f;
 <input type="file" id="upload" accept="image/*" multiple style="display:none;">
 </label>
 
+<label class="botao camera">
+📷 Câmera
+<input type="file" id="camera" accept="image/*" capture="environment" style="display:none;">
+</label>
+
 <button class="botao processar" onclick="processar()">Processar</button>
+
+<button class="botao imprimir" onclick="window.print()">Imprimir A4</button>
 
 <div class="container" id="container"></div>
 
@@ -124,40 +155,20 @@ let datas = text.match(/\d{2}\/\d{2}\/\d{4}/g);
 
 if(!datas) return "PRAZO NÃO IDENTIFICADO";
 
+// remove duplicadas
+datas = [...new Set(datas)];
+
+// retorna sempre a última data
 return datas[datas.length-1];
-
-}
-
-function recortarPrazo(img){
-
-const canvas=document.createElement("canvas");
-const ctx=canvas.getContext("2d");
-
-canvas.width=img.width;
-canvas.height=img.height;
-
-ctx.drawImage(img,0,0);
-
-let x=0;
-let y=img.height*0.45;
-let w=img.width*0.4;
-let h=img.height*0.25;
-
-const prazoCanvas=document.createElement("canvas");
-const pctx=prazoCanvas.getContext("2d");
-
-prazoCanvas.width=w;
-prazoCanvas.height=h;
-
-pctx.drawImage(canvas,x,y,w,h,0,0,w,h);
-
-return prazoCanvas;
 
 }
 
 async function processar(){
 
-const arquivos=document.getElementById("upload").files;
+const galeria=document.getElementById("upload").files;
+const camera=document.getElementById("camera").files;
+
+const arquivos=[...galeria,...camera];
 
 if(arquivos.length==0){
 
@@ -169,34 +180,24 @@ return;
 await initOCR();
 
 const container=document.getElementById("container");
+
 container.innerHTML="";
 
 for(let i=0;i<arquivos.length && i<4;i++){
 
 const etiqueta=document.createElement("div");
+
 etiqueta.className="etiqueta";
 etiqueta.innerHTML="Processando...";
+
 container.appendChild(etiqueta);
-
-const img=new Image();
-
-img.src=URL.createObjectURL(arquivos[i]);
-
-await new Promise(r=>img.onload=r);
 
 try{
 
-// OCR completo
-const { data:{ text } } = await worker.recognize(img);
+const { data:{ text } } = await worker.recognize(arquivos[i]);
 
-let awbFinal=extrairAWB(text);
-
-// OCR somente área do prazo
-let canvasPrazo=recortarPrazo(img);
-
-const { data:{ text: prazoOCR } } = await worker.recognize(canvasPrazo);
-
-let prazoFinal=extrairPrazo(prazoOCR);
+let awbFinal = extrairAWB(text);
+let prazoFinal = extrairPrazo(text);
 
 etiqueta.innerHTML=`
 
@@ -206,16 +207,24 @@ etiqueta.innerHTML=`
 
 <div class="prazo">Prazo: ${prazoFinal}</div>
 
-<svg id="barcode${i}"></svg>
+<svg class="barcode" id="barcode${i}"></svg>
 
 `;
 
-JsBarcode(`#barcode${i}`,awbFinal,{
+if(awbFinal!=="AWB NÃO IDENTIFICADA"){
+
+JsBarcode(`#barcode${i}`, awbFinal, {
+
 format:"CODE128",
 width:4,
 height:110,
-displayValue:true
+margin:20,
+displayValue:true,
+fontSize:20
+
 });
+
+}
 
 }catch(e){
 
@@ -224,6 +233,9 @@ etiqueta.innerHTML="Erro OCR";
 }
 
 }
+
+document.getElementById("upload").value="";
+document.getElementById("camera").value="";
 
 }
 
