@@ -141,6 +141,49 @@ await worker.initialize('eng');
 
 }
 
+function extrairAWB(text){
+
+let awbMatch=text.match(/577[0-9]{8,15}/);
+
+if(awbMatch) return awbMatch[0];
+
+return "AWB NÃO IDENTIFICADA";
+
+}
+
+function extrairPrazo(text){
+
+let prazo="PRAZO NÃO IDENTIFICADO";
+
+let linhas=text.split("\n");
+
+for(let i=0;i<linhas.length;i++){
+
+let linha=linhas[i].toLowerCase();
+
+if(linha.includes("prazo")){
+
+for(let j=i+1;j<i+6 && j<linhas.length;j++){
+
+let data=linhas[j].match(/\d{2}\/\d{2}\/\d{4}/);
+
+if(data){
+
+prazo=data[0];
+return prazo;
+
+}
+
+}
+
+}
+
+}
+
+return prazo;
+
+}
+
 async function processar(){
 
 const galeria=document.getElementById("upload").files;
@@ -151,7 +194,6 @@ const arquivos=[...galeria,...camera];
 if(arquivos.length==0){
 
 alert("Selecione imagens.");
-
 return;
 
 }
@@ -167,7 +209,6 @@ for(let i=0;i<arquivos.length && i<4;i++){
 const etiqueta=document.createElement("div");
 
 etiqueta.className="etiqueta";
-
 etiqueta.innerHTML="Processando...";
 
 container.appendChild(etiqueta);
@@ -176,49 +217,8 @@ try{
 
 const { data:{ text } } = await worker.recognize(arquivos[i]);
 
-// ==========================
-// PROCURAR AWB
-// ==========================
-
-let awbMatch = text.match(/577[0-9]{8,15}/);
-
-let awbFinal = "AWB NÃO IDENTIFICADA";
-
-if(awbMatch){
-
-awbFinal = awbMatch[0];
-
-}
-
-// ==========================
-// PROCURAR PRAZO
-// ==========================
-
-// tenta pegar data depois da palavra Prazo
-let prazoMatch = text.match(/Prazo\s*(\d{2}\/\d{2}\/\d{4})/i);
-
-let prazoFinal = "PRAZO NÃO IDENTIFICADO";
-
-if(prazoMatch){
-
-prazoFinal = prazoMatch[1];
-
-}else{
-
-// fallback: qualquer data
-let dataMatch = text.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
-
-if(dataMatch){
-
-prazoFinal = dataMatch[0];
-
-}
-
-}
-
-// ==========================
-// MONTAR ETIQUETA
-// ==========================
+let awbFinal=extrairAWB(text);
+let prazoFinal=extrairPrazo(text);
 
 etiqueta.innerHTML=`
 
@@ -232,13 +232,9 @@ etiqueta.innerHTML=`
 
 `;
 
-// ==========================
-// GERAR BARCODE
-// ==========================
+if(awbFinal!=="AWB NÃO IDENTIFICADA"){
 
-if(awbFinal !== "AWB NÃO IDENTIFICADA"){
-
-JsBarcode(`#barcode${i}`, awbFinal, {
+JsBarcode(`#barcode${i}`,awbFinal,{
 
 format:"CODE128",
 width:4,
