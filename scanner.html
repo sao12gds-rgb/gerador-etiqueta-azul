@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Scanner AWB</title>
+</head>
+
+<body>
+
+<h2>Leitura de AWB</h2>
+<p>Bipe o código.</p>
+
+<input id="scanner" autofocus style="opacity:0">
+
+<script>
+
+let buffer="";
+let tempo=Date.now();
+
+document.addEventListener("keydown",function(e){
+
+let agora=Date.now();
+
+if(agora-tempo>100){
+buffer="";
+}
+
+tempo=agora;
+
+if(e.key==="Enter"){
+
+enviar(buffer);
+
+buffer="";
+return;
+
+}
+
+if(e.key.length===1){
+buffer+=e.key;
+}
+
+});
+
+function enviar(codigo){
+
+fetch("URL_DO_WEBAPP",{
+method:"POST",
+body:new URLSearchParams({codigo:codigo})
+});
+
+console.log("Enviado:",codigo);
+
+}
+
+</script>
+
+</body>
+</html>
