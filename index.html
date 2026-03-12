@@ -64,14 +64,7 @@ margin-bottom:15px;
 .awb{
 font-size:42px;
 font-weight:bold;
-margin-bottom:10px;
-}
-
-.prazo{
-font-size:22px;
-font-weight:bold;
-margin-bottom:10px;
-color:#d32f2f;
+margin-bottom:20px;
 }
 
 .barcode{
@@ -135,37 +128,23 @@ worker = await Tesseract.createWorker();
 await worker.loadLanguage('eng');
 await worker.initialize('eng');
 
-await worker.setParameters({
-preserve_interword_spaces: '1'
-});
-
 }
 
 }
 
 function extrairAWB(text){
 
-let awbMatch = text.match(/577[\s\-]?\d{8,15}/);
+text = text.replace(/\s/g,'');
+
+let awbMatch = text.match(/577\d{8}/);
 
 if(awbMatch){
 
-return awbMatch[0].replace(/[\s\-]/g,'');
+return awbMatch[0];
 
 }
 
 return "AWB NÃO IDENTIFICADA";
-
-}
-
-function extrairPrazo(text){
-
-let datas = text.match(/\d{2}\/\d{2}\/\d{4}/g);
-
-if(!datas) return "PRAZO NÃO IDENTIFICADO";
-
-datas = [...new Set(datas)];
-
-return datas[datas.length-1];
 
 }
 
@@ -252,12 +231,10 @@ const imagemMelhorada = await melhorarImagem(arquivos[i]);
 const { data:{ text } } = await worker.recognize(imagemMelhorada);
 
 let awbFinal = extrairAWB(text);
-let prazoFinal = extrairPrazo(text);
 
 etiqueta.innerHTML = `
 <img class="logo" src="logo-azulcargo.png">
 <div class="awb">${awbFinal}</div>
-<div class="prazo">Prazo: ${prazoFinal}</div>
 <svg class="barcode" id="barcode${i}"></svg>
 `;
 
