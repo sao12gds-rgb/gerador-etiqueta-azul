@@ -136,7 +136,6 @@ await worker.loadLanguage('eng');
 await worker.initialize('eng');
 
 await worker.setParameters({
-tessedit_char_whitelist: "0123456789/-",
 preserve_interword_spaces: '1'
 });
 
@@ -146,7 +145,7 @@ preserve_interword_spaces: '1'
 
 function extrairAWB(text){
 
-let awbMatch = text.match(/577[\s\-]?[0-9]{8,15}/);
+let awbMatch = text.match(/577[\s\-]?\d{8,15}/);
 
 if(awbMatch){
 
@@ -190,13 +189,19 @@ const data=imageData.data;
 
 for(let i=0;i<data.length;i+=4){
 
-let avg=(data[i]+data[i+1]+data[i+2])/3;
+let r=data[i];
+let g=data[i+1];
+let b=data[i+2];
 
-avg = avg > 160 ? 255 : 0;
+let contraste=1.2;
 
-data[i]=avg;
-data[i+1]=avg;
-data[i+2]=avg;
+r=((r-128)*contraste)+128;
+g=((g-128)*contraste)+128;
+b=((b-128)*contraste)+128;
+
+data[i]=r;
+data[i+1]=g;
+data[i+2]=b;
 
 }
 
