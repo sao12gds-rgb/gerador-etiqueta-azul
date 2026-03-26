@@ -49,7 +49,6 @@ border:2px solid #003B73;
 border-radius:8px;
 padding:20px;
 height:340px;
-
 display:flex;
 flex-direction:column;
 justify-content:center;
@@ -65,6 +64,27 @@ margin-bottom:15px;
 font-size:42px;
 font-weight:bold;
 margin-bottom:20px;
+text-align:center;
+}
+
+.motivo{
+font-size:22px;
+font-weight:bold;
+margin:10px 0 18px 0;
+width:90%;
+padding:8px 10px;
+text-align:center;
+border:2px solid #003B73;
+border-radius:6px;
+}
+
+/* TEXTO PARA IMPRESSÃO */
+.motivo-texto{
+display:none;
+font-size:28px;
+font-weight:bold;
+margin:10px 0 18px 0;
+text-align:center;
 }
 
 .barcode{
@@ -89,6 +109,16 @@ left:0;
 width:100%;
 }
 
+/* ESCONDE SELECT */
+.motivo{
+display:none;
+}
+
+/* MOSTRA TEXTO */
+.motivo-texto{
+display:block;
+}
+
 }
 
 </style>
@@ -111,7 +141,7 @@ width:100%;
 
 <button class="botao processar" onclick="processar()">Processar</button>
 
-<button class="botao imprimir" onclick="window.print()">Imprimir A4</button>
+<button class="botao imprimir" onclick="prepararImpressao()">Imprimir A4</button>
 
 <div class="container" id="container"></div>
 
@@ -124,7 +154,6 @@ async function initOCR(){
 if(!worker){
 
 worker = await Tesseract.createWorker();
-
 await worker.loadLanguage('eng');
 await worker.initialize('eng');
 
@@ -139,9 +168,7 @@ text = text.replace(/\s/g,'');
 let awbMatch = text.match(/577\d{8}/);
 
 if(awbMatch){
-
 return awbMatch[0];
-
 }
 
 return "AWB NÃO IDENTIFICADA";
@@ -152,45 +179,44 @@ async function melhorarImagem(file){
 
 return new Promise(resolve=>{
 
-const img=new Image();
-const canvas=document.createElement("canvas");
-const ctx=canvas.getContext("2d");
+const img = new Image();
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
 
-img.onload=()=>{
+img.onload = ()=>{
 
-canvas.width=img.width;
-canvas.height=img.height;
+canvas.width = img.width;
+canvas.height = img.height;
 
 ctx.drawImage(img,0,0);
 
-const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-const data=imageData.data;
+const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+const data = imageData.data;
 
 for(let i=0;i<data.length;i+=4){
 
-let r=data[i];
-let g=data[i+1];
-let b=data[i+2];
+let r = data[i];
+let g = data[i+1];
+let b = data[i+2];
 
-let contraste=1.2;
+let contraste = 1.2;
 
-r=((r-128)*contraste)+128;
-g=((g-128)*contraste)+128;
-b=((b-128)*contraste)+128;
+r = ((r-128)*contraste)+128;
+g = ((g-128)*contraste)+128;
+b = ((b-128)*contraste)+128;
 
-data[i]=r;
-data[i+1]=g;
-data[i+2]=b;
+data[i] = r;
+data[i+1] = g;
+data[i+2] = b;
 
 }
 
 ctx.putImageData(imageData,0,0);
-
 resolve(canvas);
 
 };
 
-img.src=URL.createObjectURL(file);
+img.src = URL.createObjectURL(file);
 
 });
 
@@ -198,36 +224,31 @@ img.src=URL.createObjectURL(file);
 
 async function processar(){
 
-const galeria=document.getElementById("upload").files;
-const camera=document.getElementById("camera").files;
+const galeria = document.getElementById("upload").files;
+const camera = document.getElementById("camera").files;
 
-const arquivos=[...galeria,...camera];
+const arquivos = [...galeria,...camera];
 
 if(arquivos.length==0){
-
 alert("Selecione imagens.");
 return;
-
 }
 
 await initOCR();
 
-const container=document.getElementById("container");
-container.innerHTML="";
+const container = document.getElementById("container");
+container.innerHTML = "";
 
 for(let i=0;i<arquivos.length && i<4;i++){
 
-const etiqueta=document.createElement("div");
-
-etiqueta.className="etiqueta";
-etiqueta.innerHTML="Processando...";
-
+const etiqueta = document.createElement("div");
+etiqueta.className = "etiqueta";
+etiqueta.innerHTML = "Processando...";
 container.appendChild(etiqueta);
 
 try{
 
 const imagemMelhorada = await melhorarImagem(arquivos[i]);
-
 const { data:{ text } } = await worker.recognize(imagemMelhorada);
 
 let awbFinal = extrairAWB(text);
@@ -235,6 +256,19 @@ let awbFinal = extrairAWB(text);
 etiqueta.innerHTML = `
 <img class="logo" src="logo-azulcargo.png">
 <div class="awb">${awbFinal}</div>
+
+<select class="motivo" onchange="atualizarMotivo(this)">
+<option value="">SELECIONE O MOTIVO</option>
+<option>AUSENTE + DE 3 VEZES</option>
+<option>ENDERECO NAO LOCALIZADO</option>
+<option>CLIENTE DESCONHECIDO</option>
+<option>CLIENTE MUDOU-SE</option>
+<option>CEP ERRADO</option>
+<option>ETIQUETAS DIVERGENTES</option>
+</select>
+
+<div class="motivo-texto"></div>
+
 <svg class="barcode" id="barcode${i}"></svg>
 `;
 
@@ -253,14 +287,33 @@ fontSize:20
 
 }catch(e){
 
-etiqueta.innerHTML="Erro OCR";
+etiqueta.innerHTML = "Erro OCR";
 
 }
 
 }
 
-document.getElementById("upload").value="";
-document.getElementById("camera").value="";
+document.getElementById("upload").value = "";
+document.getElementById("camera").value = "";
+
+}
+
+function atualizarMotivo(select){
+
+const texto = select.parentElement.querySelector(".motivo-texto");
+texto.innerText = select.value;
+
+}
+
+function prepararImpressao(){
+
+// garante que todos selects atualizem o texto antes de imprimir
+document.querySelectorAll(".motivo").forEach(select=>{
+const texto = select.parentElement.querySelector(".motivo-texto");
+texto.innerText = select.value || "";
+});
+
+window.print();
 
 }
 
