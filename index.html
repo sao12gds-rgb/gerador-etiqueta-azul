@@ -68,20 +68,28 @@ text-align:center;
 }
 
 .motivo{
-font-size:22px;
+font-size:32px;
 font-weight:bold;
-margin:10px 0 18px 0;
+margin:15px 0 20px 0;
 width:90%;
-padding:8px 10px;
+padding:14px 16px;
 text-align:center;
 border:2px solid #003B73;
-border-radius:6px;
+border-radius:8px;
+appearance:none;
+-webkit-appearance:none;
+-moz-appearance:none;
+background:white;
+
+background-image:url("data:image/svg+xml;utf8,<svg fill='%23003B73' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+background-repeat:no-repeat;
+background-position:right 15px center;
+background-size:20px;
 }
 
-/* TEXTO PARA IMPRESSÃO */
 .motivo-texto{
 display:none;
-font-size:28px;
+font-size:34px;
 font-weight:bold;
 margin:10px 0 18px 0;
 text-align:center;
@@ -109,12 +117,10 @@ left:0;
 width:100%;
 }
 
-/* ESCONDE SELECT */
 .motivo{
 display:none;
 }
 
-/* MOSTRA TEXTO */
 .motivo-texto{
 display:block;
 }
@@ -150,29 +156,18 @@ display:block;
 let worker;
 
 async function initOCR(){
-
 if(!worker){
-
 worker = await Tesseract.createWorker();
 await worker.loadLanguage('eng');
 await worker.initialize('eng');
-
 }
-
 }
 
 function extrairAWB(text){
-
 text = text.replace(/\s/g,'');
-
 let awbMatch = text.match(/577\d{8}/);
-
-if(awbMatch){
-return awbMatch[0];
-}
-
+if(awbMatch){ return awbMatch[0]; }
 return "AWB NÃO IDENTIFICADA";
-
 }
 
 async function melhorarImagem(file){
@@ -195,19 +190,12 @@ const data = imageData.data;
 
 for(let i=0;i<data.length;i+=4){
 
-let r = data[i];
-let g = data[i+1];
-let b = data[i+2];
+let r=data[i], g=data[i+1], b=data[i+2];
+let contraste=1.2;
 
-let contraste = 1.2;
-
-r = ((r-128)*contraste)+128;
-g = ((g-128)*contraste)+128;
-b = ((b-128)*contraste)+128;
-
-data[i] = r;
-data[i+1] = g;
-data[i+2] = b;
+data[i]=((r-128)*contraste)+128;
+data[i+1]=((g-128)*contraste)+128;
+data[i+2]=((b-128)*contraste)+128;
 
 }
 
@@ -259,12 +247,22 @@ etiqueta.innerHTML = `
 
 <select class="motivo" onchange="atualizarMotivo(this)">
 <option value="">SELECIONE O MOTIVO</option>
+
 <option>AUSENTE + DE 3 VEZES</option>
 <option>ENDERECO NAO LOCALIZADO</option>
 <option>CLIENTE DESCONHECIDO</option>
 <option>CLIENTE MUDOU-SE</option>
 <option>CEP ERRADO</option>
 <option>ETIQUETAS DIVERGENTES</option>
+
+<option>RECUSADO</option>
+<option>BAIXA ERRONEA</option>
+<option>CTE CANCELADO</option>
+<option>AVARIA</option>
+<option>FALTA VOLUME</option>
+<option>AGUARDANDO TROCA DE OFFLOAD</option>
+<option>DEVOLUCAO</option>
+
 </select>
 
 <div class="motivo-texto"></div>
@@ -273,7 +271,6 @@ etiqueta.innerHTML = `
 `;
 
 if(awbFinal !== "AWB NÃO IDENTIFICADA"){
-
 JsBarcode(`#barcode${i}`, awbFinal, {
 format:"CODE128",
 width:4,
@@ -282,32 +279,26 @@ margin:20,
 displayValue:true,
 fontSize:20
 });
-
 }
 
 }catch(e){
-
 etiqueta.innerHTML = "Erro OCR";
-
 }
 
 }
 
-document.getElementById("upload").value = "";
-document.getElementById("camera").value = "";
+document.getElementById("upload").value="";
+document.getElementById("camera").value="";
 
 }
 
 function atualizarMotivo(select){
-
 const texto = select.parentElement.querySelector(".motivo-texto");
 texto.innerText = select.value;
-
 }
 
 function prepararImpressao(){
 
-// garante que todos selects atualizem o texto antes de imprimir
 document.querySelectorAll(".motivo").forEach(select=>{
 const texto = select.parentElement.querySelector(".motivo-texto");
 texto.innerText = select.value || "";
